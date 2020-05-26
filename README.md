@@ -19,14 +19,23 @@ how to deploy ( preferably makefile )
 
 ### Configure Git-LFS in Repo
 
-`git config lfs.url https://<user>:<github token>@<url>/<owner>/<repo>`
+```
+git config lfs.url https://<user>:<github token>@<url>/<owner>/<repo>
+```
 
+Alternatively edit .git/config to add:
+
+```
+[lfs]
+  url = https://<user>:<github token>@<url>/<owner>/<repo>
+```
+
+What to use to replace:
 * **user**: 
 * **github token**: 
 * **url**:
 * **owner**:
 * **repo**:
-
 
 ## Future Thoughts
 
