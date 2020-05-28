@@ -19,7 +19,9 @@ Create `.env.yaml`, and add the following environment variables:
 ### Deploy
 
 Create a Google Cloud Service Account key, and save it to `account.json` in the
-project root.
+project root. This is required to generate the Google Cloud Storage signed urls
+required for uploading & downloading files. The key should only require the
+`Storage Object Creator` & `Storage Object Viewer` roles.
 
 Run `make deploy`. Look for the following section:
 
@@ -52,11 +54,14 @@ What to use to replace:
 * **owner**: The repo owner
 * **repo**: The repo name
 
-So to generate a URL for the repo `github.com/examplecom/go-lfs-repo`
+So to generate a URL for the repo `github.com/examplecom/go-lfs-repo` with the
+function deployed to `https://us-central1-example-project.cloudfunctions.net/GOLFS`
 
 ```
-https://seanhagen:agithubtoken@github.com/examplecom/go-lfs-repo
+https://seanhagen:agithubtoken@us-central1-example-project.cloudfunctions.net/GOLFS/github.com/examplecom/go-lfs-repo
 ```
+
+It's a mouthful but now you've got your own personal Git LFS storage!
 
 #### After Clone
 
