@@ -1,40 +1,54 @@
 package golfs
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func setup() (*httprouter.Router, error) {
-	s, err := setupService()
-	if err != nil {
-		log.Printf("unable to get configuration: %v", err)
-		return nil, err
-	}
+const contentType = "application/vnd.git-lfs+json"
 
-	r := httprouter.New()
-
-	// object send/download
-	r.POST("/:host/:org/:repo/objects/batch", s.objectBatch)
-
-	//locks
-	r.POST("/:host/:org/:repo/locks", s.createLock)
-	r.GET("/:host/:org/:repo/locks", s.fetchLocks)
-	r.POST("/:host/:org/:repo/locks/verify", s.verifyLocks)
-	r.POST("/:host/:org/:repo/locks/:id/unlock", s.deleteLock)
-
-	return r, nil
-}
+const lockEntityType = "LFSEntity"
 
 func GOLFS(w http.ResponseWriter, r *http.Request) {
-	rt, err := setup()
+	log.Printf("request made to: %v", r.URL.Path)
+
+	w.Header().Set("Content-Type", contentType)
+	rid := r.Header.Get("X-Cloud-Trace-Context")
+
+	s, err := setupService(r.Context())
 	if err != nil {
-		log.Printf("unable to do function setup: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		msg := fmt.Sprintf("unable to get configuration: %v", err)
+		outputError(w, rid, msg, "", http.StatusInternalServerError)
 		return
 	}
 
-	rt.ServeHTTP(w, r)
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		msg := "This route requires HTTP Basic Auth with your GitHub username & password"
+		url := "https://github.com/git-lfs/git-lfs/blob/master/docs/api/authentication.md#specified-in-url"
+		outputError(w, rid, msg, url, http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "auth-user", user)
+	ctx = context.WithValue(ctx, "auth-pass", pass)
+	ctx = context.WithValue(ctx, "rid", rid)
+	s.ServeHTTP(w, r.WithContext(ctx))
+}
+
+func outputError(w http.ResponseWriter, rid, msg, url string, status int) {
+	log.Printf("error encountered: %v", msg)
+	w.WriteHeader(status)
+
+	r := lockError{Message: msg, DocumentationURL: url, RequestId: rid}
+	wr := json.NewEncoder(w)
+	err := wr.Encode(r)
+	if err != nil {
+		log.Printf("unable to marshal JSON response: %v", err)
+		return
+	}
 }
