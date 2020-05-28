@@ -37,20 +37,21 @@ Copy that URL, you'll need it later.
 #### First Time
 
 ```
-git config lfs.url https://<user>:<github token>@<url>/<owner>/<repo>
+git config lfs.url https://<user>:<github token>@<url>/<host>/<owner>/<repo>
 ```
 
 Alternatively edit .git/config to add:
 
 ```
 [lfs]
-  url = https://<user>:<github token>@<url>/<owner>/<repo>
+  url = https://<user>:<github token>@<url>/<host>/<owner>/<repo>
 ```
 
 What to use to replace:
 * **user**: Your GitHub username
 * **github token**: See `GitHub Token` below
 * **url**: The URL you copied after running `make deploy` above
+* **host**: The only supported value right now is `github.com`
 * **owner**: The repo owner
 * **repo**: The repo name
 
