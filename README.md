@@ -18,6 +18,9 @@ Create `.env.yaml`, and add the following environment variables:
 
 ### Deploy
 
+Create a Google Cloud Service Account key, and save it to `account.json` in the
+project root.
+
 Run `make deploy`. Look for the following section:
 
 ```
@@ -49,10 +52,10 @@ What to use to replace:
 * **owner**: The repo owner
 * **repo**: The repo name
 
-So, for this repo, I'd construct a URL something like this:
+So to generate a URL for the repo `github.com/examplecom/go-lfs-repo`
 
 ```
-https://sean:agithubtoken@github.com/seanhagen/golfs
+https://seanhagen:agithubtoken@github.com/examplecom/go-lfs-repo
 ```
 
 #### After Clone
@@ -94,4 +97,6 @@ To generate a token to use with `golfs`, follow these steps:
    get to see it again, so make sure you don't forget!
 6. Use the token in the git-lfs URL 
 
-
+This token is only used to check that the user has the correct permissions when
+attempting to upload or download objects ( `write` or `admin` for upload, `read`
+or `admin` for download ).
