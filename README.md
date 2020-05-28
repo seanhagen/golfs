@@ -29,6 +29,8 @@ Copy that URL, you'll need it later.
 
 ### Configure Git-LFS in Repo
 
+#### First Time
+
 ```
 git config lfs.url https://<user>:<github token>@<url>/<owner>/<repo>
 ```
@@ -53,7 +55,34 @@ So, for this repo, I'd construct a URL something like this:
 https://sean:agithubtoken@github.com/seanhagen/golfs
 ```
 
-#### GitHub Token
+#### After Clone
+
+After cloning a repo that uses `golfs` to store objects, you'll probably see a
+message like this:
+
+```
+Error downloading object: lock.png (a2ca9a3): Smudge error: Error downloading lock.png (a2ca9a3cabe684801034f55e1c865631f50328349c6e23fc8bb4f585bb3ebd92): [a2ca9a3cabe684801034f55e1c865631f50328349c6e23fc8bb4f585bb3ebd92] Object does not exist on the server: [404] Object does not exist on the server
+
+Errors logged to /home/sean/tmp/lfs-testing/.git/lfs/logs/20200528T115811.722416529.log
+Use `git lfs logs last` to view the log.
+error: external filter 'git-lfs filter-process' failed
+fatal: lock.png: smudge filter lfs failed
+warning: Clone succeeded, but checkout failed.
+```
+
+That's fine! Because `golfs` hasn't been setup on this clone yet, it wasn't able
+to pull the objects. It tried to pull them from the GitHub LFS storage but they
+don't exist there so that failed.
+
+Simply follow the same steps in [First Time](#first-time) to set up the
+URL. Then run these commands inside the repo:
+
+1. `git lfs pull`
+2. `git add .`
+
+And your repo should be good to go!
+
+### GitHub Token
 
 To generate a token to use with `golfs`, follow these steps:
 
