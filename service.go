@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -82,22 +81,7 @@ func setupService(ctx context.Context) (*service, error) {
 		return nil, err
 	}
 
-	files, err := ioutil.ReadDir("./serverless_function_source_code")
-	if err != nil {
-		log.Printf("ioutil.ListFiles: %v", err)
-	}
-	log.Printf("files in './serverless_function_source_code")
-	for _, f := range files {
-		log.Printf("\t%v", f.Name())
-	}
-	log.Printf("\n\n")
-
-	path, err := filepath.Abs("./serverless_function_source_code/account.json")
-	if err != nil {
-		return nil, fmt.Errorf("unable to get absolute path to account.json: %v", err)
-	}
-
-	jsonKey, err := ioutil.ReadFile(path)
+	jsonKey, err := ioutil.ReadFile("./serverless_function_source_code/account.json")
 	if err != nil {
 		return nil, fmt.Errorf("cannot read the JSON key file, err: %v", err)
 	}

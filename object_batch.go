@@ -1,6 +1,7 @@
 package golfs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -25,7 +25,8 @@ type batchReq struct {
 }
 
 type batchRespObjAction struct {
-	Download *downloadAction `json:"download,omitempty"`
+	Download *action `json:"download,omitempty"`
+	Upload   *action `json:"upload,omitempty"`
 }
 
 type batchRespObj struct {
@@ -40,10 +41,10 @@ type batchResp struct {
 	Objects  []batchRespObj `json:"objects"`
 }
 
-type downloadAction struct {
+type action struct {
 	HREF      string            `json:"href"`
 	Header    map[string]string `json:"header,omitempty"`
-	ExpiresIn int64             `json:"expires_in,omitempty"`
+	ExpiresIn *int64            `json:"expires_in,omitempty"`
 	ExpiresAt time.Time         `json:"expires_at,omitempty"`
 }
 
@@ -53,6 +54,26 @@ func (s *service) objectBatch(w http.ResponseWriter, r *http.Request, pr httprou
 
 	log.Printf("request to object batch -- %v", r.URL.Path)
 
+	dec := json.NewDecoder(r.Body)
+	req := &batchReq{}
+	dec.Decode(req)
+
+	switch req.Operation {
+	case "upload":
+		log.Printf("object batch -- upload")
+		s.objectBatchUpload(ctx, w, pr, req)
+	case "download":
+		log.Printf("object batch -- download")
+		s.objectBatchDownload(ctx, w, pr, req)
+	default:
+		msg := fmt.Sprintf("invalid git-lfs operation '%v'", req.Operation)
+		outputError(w, rid, msg, "", http.StatusBadRequest)
+	}
+}
+
+// objectBatchUpload ...
+func (s *service) objectBatchUpload(ctx context.Context, w http.ResponseWriter, pr httprouter.Params, req *batchReq) {
+	rid := ctx.Value("rid").(string)
 	user := ctx.Value("auth-user").(string)
 	pass := ctx.Value("auth-pass").(string)
 
@@ -61,39 +82,28 @@ func (s *service) objectBatch(w http.ResponseWriter, r *http.Request, pr httprou
 	repo := pr.ByName("repo")
 
 	required := []string{"write", "admin"}
-	err := s.authUser(r.Context(), required, host, org, repo, user, pass)
+	err := s.authUser(ctx, required, host, org, repo, user, pass)
 	if err != nil {
 		msg := "You must have push access to verify locks"
 		url := "https://github.com/git-lfs/git-lfs/blob/master/docs/api/locking.md#unauthorized-response-2"
 		outputError(w, rid, msg, url, http.StatusForbidden)
 		return
 	}
-	log.Printf("authorized user")
 
-	dec := json.NewDecoder(r.Body)
-	req := &batchReq{}
-	dec.Decode(req)
-
-	// b := s.gs.Bucket(s.bucket)
-	// if _, err := b.Attrs(ctx); err != nil {
-	// 	msg := fmt.Sprintf("the bucket '%s' doesn't exist", s.bucket)
-	// 	outputError(w, rid, msg, "", http.StatusInternalServerError)
-	// 	return
-	// }
-	// o := b.Object(req.Objects.OID)
+	if s.locking {
+		// check for locks!
+	}
 
 	out := batchResp{
 		Transfer: "basic",
-		//Objects: []batchRespObj{},
 	}
 
 	objs := []batchRespObj{}
 
-	log.Printf("setting up output")
-
 	for _, o := range req.Objects {
 		ea := time.Now().Add(s.lockTimeout)
-		url, err := storage.SignedURL(s.bucket, o.OID, &storage.SignedURLOptions{
+		obj := fmt.Sprintf("%v/%v/%v/%v/%v", host, org, repo, req.Ref.Name, o.OID)
+		url, err := storage.SignedURL(s.bucket, obj, &storage.SignedURLOptions{
 			Scheme:         storage.SigningSchemeV4,
 			Method:         "PUT",
 			GoogleAccessID: s.conf.Email,
@@ -112,7 +122,7 @@ func (s *service) objectBatch(w http.ResponseWriter, r *http.Request, pr httprou
 			Size:          o.Size,
 			Authenticated: true,
 			Actions: batchRespObjAction{
-				Download: &downloadAction{
+				Upload: &action{
 					HREF:      url,
 					ExpiresAt: ea,
 				},
@@ -121,9 +131,70 @@ func (s *service) objectBatch(w http.ResponseWriter, r *http.Request, pr httprou
 		objs = append(objs, or)
 	}
 	out.Objects = objs
+	enc := json.NewEncoder(w)
+	enc.Encode(out)
+}
 
-	log.Printf("got output: %v", spew.Sdump(out))
+// objectBatchDownload ...
+func (s *service) objectBatchDownload(ctx context.Context, w http.ResponseWriter, pr httprouter.Params, req *batchReq) {
+	rid := ctx.Value("rid").(string)
+	user := ctx.Value("auth-user").(string)
+	pass := ctx.Value("auth-pass").(string)
 
+	host := pr.ByName("host")
+	org := pr.ByName("org")
+	repo := pr.ByName("repo")
+
+	required := []string{"read", "admin"}
+	err := s.authUser(ctx, required, host, org, repo, user, pass)
+	if err != nil {
+		msg := "You must have push access to verify locks"
+		url := "https://github.com/git-lfs/git-lfs/blob/master/docs/api/locking.md#unauthorized-response-2"
+		outputError(w, rid, msg, url, http.StatusForbidden)
+		return
+	}
+
+	if s.locking {
+		// check for locks!
+	}
+
+	out := batchResp{
+		Transfer: "basic",
+	}
+
+	objs := []batchRespObj{}
+
+	for _, o := range req.Objects {
+		ea := time.Now().Add(s.lockTimeout)
+		log.Printf("building download url for %v/%v - %v - %v", org, repo, req.Ref.Name, o.OID)
+		obj := fmt.Sprintf("%v/%v/%v/%v/%v", host, org, repo, req.Ref.Name, o.OID)
+		url, err := storage.SignedURL(s.bucket, obj, &storage.SignedURLOptions{
+			Scheme:         storage.SigningSchemeV4,
+			Method:         "GET",
+			GoogleAccessID: s.conf.Email,
+			PrivateKey:     s.conf.PrivateKey,
+			Expires:        ea,
+		})
+		if err != nil {
+			msg := fmt.Sprintf("unable to create signed url for file: %v", err)
+			outputError(w, rid, msg, "", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("built url: %v", url)
+		or := batchRespObj{
+			OID:           o.OID,
+			Size:          o.Size,
+			Authenticated: true,
+			Actions: batchRespObjAction{
+				Download: &action{
+					HREF:      url,
+					ExpiresAt: ea,
+				},
+			},
+		}
+		objs = append(objs, or)
+	}
+	out.Objects = objs
 	enc := json.NewEncoder(w)
 	enc.Encode(out)
 }

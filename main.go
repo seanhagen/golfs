@@ -15,6 +15,10 @@ const lockEntityType = "LFSEntity"
 func GOLFS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("request made to: %v", r.URL.Path)
 
+	for k, v := range r.Header {
+		log.Printf("header: %v -> %v", k, v)
+	}
+
 	w.Header().Set("Content-Type", contentType)
 	rid := r.Header.Get("X-Cloud-Trace-Context")
 
