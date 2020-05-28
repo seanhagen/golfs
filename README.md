@@ -85,6 +85,11 @@ URL. Then run these commands inside the repo:
 
 And your repo should be good to go!
 
+#### Transfering
+
+Follow the same steps in [First Time](#first-time) to set up the git-lfs URL,
+then run `git lfs push --all origin <branch>` to re-push all the objects.
+
 ### GitHub Token
 
 To generate a token to use with `golfs`, follow these steps:
