@@ -30,7 +30,6 @@ func ObjectBatch(w http.ResponseWriter, r *http.Request, pr httprouter.Params) {
 
 	user, pass, ok := r.BasicAuth()
 	log.Printf("auth(%v): %v -> %v", ok, user, pass)
-
 	log.Printf("url: %v - %v - %v", r.URL.Host, r.URL.Path, r.URL.String())
 	//log.Printf("headers: %v", spew.Sdump(r.Header))
 	log.Printf("received: %v", string(data))

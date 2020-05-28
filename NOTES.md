@@ -26,4 +26,26 @@ LFS Server: https://git-server.com/foo/bar.git/info/lfs
 Git Remote: ssh://git-server.com/foo/bar.git
 LFS Server: https://git-server.com/foo/bar.git/info/lfs
 
-## 
+## How It Works
+
+- assumptions:
+  - running as google cloud function
+  - storing files in google cloud storage
+  - storing lock information in datastore
+  - github is being used for git
+
+- required configuration:
+  - lock storage, google datastore namespace
+      
+- optional config
+  - allow locking ( if turned off will fake locking )
+  - lock timeout ( default 5 min )
+
+- routes
+  - locks
+    - create
+    - list locks
+    - list locks for verification
+    - delete 
+  - object/batch
+    - used for upload & download requests

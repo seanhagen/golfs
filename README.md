@@ -5,10 +5,6 @@ Golfs is a Git-LFS server written in Go, that uses Google Cloud Storage to store
 files. It's meant to be a replacement for Github's LFS storage so you can have
 better control over where and how your files are stored.
 
-## Setup
-
-Here's how to get Golfs setup for yourself.
-
 ### Configure
 
 any steps required to configure go here
